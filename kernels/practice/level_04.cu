@@ -36,7 +36,7 @@ __global__ void kernel(
 
      // each thred = 1x16 @ 16x64
      float c[4] = {0.0, 0.0, 0.0, 0.0};
-     for(int i=0;i<N;i+=T) {
+     for(int i=0;i<N/T;i++) {
         // Load A and B tiles
         ATile[tx][ty] = A[(bx*T+tx)*N+i*T+ty];
         for(int j=0;j<tile;j+=T) { // j=0, 16, 32, 48
