@@ -126,7 +126,7 @@ static int run_benchmark(size_t M, size_t N, size_t K) {
     }
 
     std::cout << std::fixed << std::setprecision(2)
-              << "time      : " << us << " us\n"
+              << "time      : " << us / 1000 << " ms\n"
               << "throughput: " << tflops << " TFLOPs  ("
               << (100.0 * tflops / peak) << "% of " << peak << " peak)\n"
               << std::setprecision(6)

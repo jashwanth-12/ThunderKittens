@@ -16,4 +16,5 @@ SRC := level_$(LEVEL).cu
 OUT := level_$(LEVEL).out
 CMD := ./level_$(LEVEL).out
 CONFIG := standalone
+$(OUT): harness.cu
 include ../common.mk
