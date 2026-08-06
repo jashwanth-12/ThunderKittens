@@ -16,41 +16,55 @@
 #define HARNESS_DTYPE __nv_bfloat16
 
 
-__global__ void kernel(__nv_bfloat16* A, __nv_bfloat16* B, __nv_bfloat16* C, int N) {
-    __shared__ __nv_bfloat16 ATile[16][16];
-    __shared__ __nv_bfloat16 BTile[16][16];
+__global__ void kernel(
+      __nv_bfloat16* A,
+      __nv_bfloat16* B,
+      __nv_bfloat16* C,
+      int N
+  ) {
+      constexpr int T = 16;
 
-    int row = blockIdx.x * blockDim.x + threadIdx.x;
-    int col = blockIdx.y * blockDim.y + threadIdx.y;
+      __shared__ __nv_bfloat16 ATile[T][T];
+      __shared__ __nv_bfloat16 BTile[T][T];
 
-    float totalSum = 0.0;
-    for (int i=0;i<N/16;i++) {
-        // Load ith tile in A and B into shared mem
-        int aRow = blockIdx.x * blockDim.x + threadIdx.x;
-        int aCol = i * blockDim.y + threadIdx.y;
-        int bRow = i * blockDim.x + threadIdx.x;
-        int bCol = blockIdx.y * blockDim.y + threadIdx.y;
-        ATile[threadIdx.x][threadIdx.y] = A[aRow * N + aCol];
-        BTile[threadIdx.x][threadIdx.y] = B[bRow * N + bCol];
+      int tx = threadIdx.x;
+      int ty = threadIdx.y;
 
-        __syncthreads();
+      int row = blockIdx.y * T + ty;
+      int col = blockIdx.x * T + tx;
 
-        float sum = 0.0;
-        for(int j=0;j<16;j++) {
-            sum += __bfloat162float(ATile[threadIdx.x][j] * BTile[j][threadIdx.y]);
-        }
-        totalSum += sum;
-        __syncthreads();
-    }
+      float totalSum = 0.0f;
 
-    C[row * N + col] = __float2bfloat16(totalSum);
-}
+      for (int tile = 0; tile < N / T; tile++) {
+          ATile[ty][tx] = A[row * N + tile * T + tx];
+          BTile[ty][tx] = B[(tile * T + ty) * N + col];
 
-void matmul(__nv_bfloat16* A, __nv_bfloat16* B, __nv_bfloat16* C, int N) {
-    int T = 16;
-    dim3 threads(T, T);
-    dim3 blocks(N / T, N /T);
-    kernel<<<blocks, threads>>>(A, B, C, N);
-}
+          __syncthreads();
 
-#include "harness.cu"
+          for (int j = 0; j < T; j++) {
+              totalSum += __bfloat162float(
+                  ATile[ty][j] * BTile[j][tx]
+              );
+          }
+
+          __syncthreads();
+      }
+
+      C[row * N + col] = __float2bfloat16(totalSum);
+  }
+
+  void matmul(
+      __nv_bfloat16* A,
+      __nv_bfloat16* B,
+      __nv_bfloat16* C,
+      int N
+  ) {
+      constexpr int T = 16;
+
+      dim3 threads(T, T);
+      dim3 blocks(N / T, N / T);
+
+      kernel<<<blocks, threads>>>(A, B, C, N);
+  }
+
+  #include "harness.cu"
