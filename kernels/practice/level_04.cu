@@ -36,7 +36,7 @@ __global__ void kernel(
 
      // each thred = 1x16 @ 16x64
      float c[4] = {0.0, 0.0, 0.0, 0.0};
-     for(int i=0;i<N/T;i+=T) {
+     for(int i=0;i<N;i+=T) {
         // Load A and B tiles
         ATile[tx][ty] = A[(bx*T+tx)*N+i*T+ty];
         for(int j=0;j<tile;j+=T) { // j=0, 16, 32, 48
@@ -46,9 +46,6 @@ __global__ void kernel(
 
         for(int j=0;j<4;j++) {
             for(int k=0;k<T;k++) {
-                if (ty+j*T >= tile) {
-                    printf("Wrong||%d, %d", ty+j*T, k);
-                }
                 c[j] += __bfloat162float(ATile[tx][k] * BTile[k][ty+j*T]);
             }
         }
