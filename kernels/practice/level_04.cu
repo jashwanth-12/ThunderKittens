@@ -53,9 +53,9 @@ __global__ void kernel(
         __syncthreads();
      }
 
-     for(int i=0;i<4;i++) {
-        C[(bx*T+tx) * N + by*tile+ty+i*T] = c[i];
-     }
+    //  for(int i=0;i<4;i++) {
+    //     C[(bx*T+tx) * N + by*tile+ty+i*T] = c[i];
+    //  }
 
   }
 
