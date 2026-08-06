@@ -39,8 +39,8 @@ __global__ void kernel(
      for(int i=0;i<N/T;i+=T) {
         // Load A and B tiles
         ATile[tx][ty] = A[(bx*T+tx)*N+i*T+ty];
-        for(int j=0;j<tile;j+=T) {
-            BTile[tx][ty+j] = B[(i*T+ty)*N + by*tile+j];
+        for(int j=0;j<tile;j+=T) { // j=0, 16, 32, 48
+            BTile[tx][ty+j] = B[(i*T+ty)*N + by*tile+tx+j]; //[0][0] []
         }
         __syncthreads();
 
