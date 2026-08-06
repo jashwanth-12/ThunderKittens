@@ -15,7 +15,6 @@
 
 #define HARNESS_DTYPE __nv_bfloat16
 
-
 __global__ void kernel(
       __nv_bfloat16* A,
       __nv_bfloat16* B,
@@ -40,22 +39,25 @@ __global__ void kernel(
      for(int i=0;i<N/T;i+=T) {
         // Load A and B tiles
         ATile[tx][ty] = A[(bx*T+tx)*N+i*T+ty];
-        for(int j=0;j<tile;j+=OG) {
+        for(int j=0;j<tile;j+=T) {
             BTile[tx][ty+j] = B[(i*T+ty)*N + by*tile+j];
         }
         __syncthreads();
 
         for(int j=0;j<4;j++) {
             for(int k=0;k<T;k++) {
-                c[j] += __bfloat162float(ATile[tx][k] * BTile[k][ty+j]);
+                if (ty+j*T >= tile) {
+                    printf("Wrong||%d, %d", ty+j*T, k);
+                }
+                c[j] += __bfloat162float(ATile[tx][k] * BTile[k][ty+j*T]);
             }
         }
         __syncthreads();
      }
 
-    //  for(int i=0;i<4;i++) {
-    //     C[(bx*T+tx) * N + by*tile+ty+i*T] = c[i];
-    //  }
+     for(int i=0;i<4;i++) {
+        C[(bx*T+tx) * N + by*tile+ty+i*T] = c[i];
+     }
 
   }
 
