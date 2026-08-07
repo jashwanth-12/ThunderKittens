@@ -13,6 +13,8 @@
 #include <cuda_bf16.h>
 #include <cstdio>
 
+constexpr int OG = 1;
+
 #define HARNESS_DTYPE __nv_bfloat16
 
 __global__ void kernel(
@@ -22,7 +24,6 @@ __global__ void kernel(
       int N
   ) {
       constexpr int T = 16;
-      constexpr int OG = 4;
 
       int tx = threadIdx.y;
       int ty = threadIdx.x;
@@ -35,7 +36,11 @@ __global__ void kernel(
      int tile = T*OG;
 
      // each thred = 1x16 @ 16x64
-     float c[4] = {0.0, 0.0, 0.0, 0.0};
+     float c[OG];
+     for(int i=0;i<OG;i++) {
+        c[i] = 0.0;
+     }
+
      for(int i=0;i<N/T;i++) {
         // Load A and B tiles
         ATile[tx][ty] = A[(bx*T+tx)*N+i*T+ty];
@@ -44,7 +49,7 @@ __global__ void kernel(
         }
         __syncthreads();
 
-        for(int j=0;j<4;j++) {
+        for(int j=0;j<OG;j++) {
             for(int k=0;k<T;k++) {
                 c[j] += __bfloat162float(ATile[tx][k] * BTile[k][ty+j*T]);
             }
@@ -52,7 +57,7 @@ __global__ void kernel(
         __syncthreads();
      }
 
-     for(int i=0;i<4;i++) {
+     for(int i=0;i<OG;i++) {
         C[(bx*T+tx) * N + by*tile+ty+i*T] = c[i];
      }
 
@@ -65,7 +70,6 @@ __global__ void kernel(
       int N
   ) {
       constexpr int T = 16;
-      constexpr int OG = 4;
 
       dim3 threads(T, T);
       dim3 blocks(N / (OG * T), N / T);
